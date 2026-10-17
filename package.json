@@ -1,0 +1,72 @@
+{
+  "name": "ferramentaria",
+  "version": "1.0.2",
+  "private": true,
+  "description": "Gestão de ferramentaria desktop Windows com banco local SQLite, peças e relatórios",
+  "author": "Equipe Ferramentaria",
+  "main": "dist-electron/electron/main.js",
+  "scripts": {
+    "dev": "npm run compile:electron && concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron . --dev\"",
+    "dev:web": "vite --host 127.0.0.1",
+    "compile:electron": "tsc -p tsconfig.electron.json",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "build": "npm run typecheck && vite build && npm run compile:electron",
+    "start": "electron .",
+    "dist": "npm run build && electron-builder --win nsis",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "lucide-react": "^0.468.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "vite": "^6.4.0",
+    "typescript": "^5.9.0",
+    "tailwindcss": "^4.1.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "electron": "^43.0.0",
+    "electron-builder": "^26.0.0",
+    "concurrently": "^9.0.0",
+    "wait-on": "^8.0.0",
+    "tsx": "^4.20.0"
+  },
+  "build": {
+    "appId": "local.ferramentaria.desktop",
+    "productName": "Ferramentaria",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json",
+      "assets/app-icon.png"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/app-icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ferramentaria"
+    },
+    "artifactName": "Ferramentaria-Setup-${version}-${arch}.${ext}"
+  }
+}
