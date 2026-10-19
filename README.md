@@ -1,4 +1,4 @@
-# Ferramentaria — Versão 1.0.2 (código digitado e base local direta)
+# Ferramentaria — Versão 1.0.3 (SSO digitado e nome automático)
 
 Sistema Windows de controle de estoque de insertos. Interface React + TypeScript e Electron, com SQLite local no processo principal. **Cada instalação tem um banco próprio e não sincroniza com os outros computadores.** A marca Ferramentaria é provisória e editável.
 
@@ -42,14 +42,14 @@ npm run dist
 
 Se a compilação e o empacotamento terminarem sem erros, o arquivo será criado em:
 
-`ferramentaria\release\Ferramentaria-Setup-1.0.2-x64.exe`
+`ferramentaria\release\Ferramentaria-Setup-1.0.3-x64.exe`
 
 Para quem apenas instala o `.exe`, **não é necessário ter Node.js nem VS Code**. O instalador não está assinado digitalmente e o Windows SmartScreen poderá emitir um aviso. Não desative políticas de segurança da empresa para contorná-lo; para distribuição comercial/empresarial, utilize assinatura de código apropriada.
 
 ## Migrar de outra fase sem perder dados
 
 1. Na instalação anterior, abra o aplicativo e faça **Administração → Exportar backup JSON**. Guarde a cópia num local seguro.
-2. Feche a versão antiga e instale ou execute a versão 1.0.2 **no mesmo usuário Windows**. Mantivemos os identificadores e a pasta local do aplicativo para reutilizar o banco.
+2. Feche a versão antiga e instale ou execute a versão 1.0.3 **no mesmo usuário Windows**. Mantivemos os identificadores e a pasta local do aplicativo para reutilizar o banco.
 3. Abra o aplicativo e confirme se os insertos, funcionários e movimentações continuam visíveis. O cadastro de peças começa vazio numa base antiga.
 4. Se precisar restaurar, use **Administração → Restaurar backup JSON**, confira os números apresentados e confirme. Essa operação **substitui os dados atuais**; o aplicativo cria uma cópia de recuperação antes disso.
 5. Verifique uma retirada com nome de peça, feche o aplicativo e abra novamente. O histórico deverá manter a peça.
@@ -113,3 +113,12 @@ A verificação neste ambiente abrange integridade dos arquivos, checagem de sin
 **Executar pelo terminal:** extraia o ZIP, abra a pasta `ferramentaria` (a que contém `package.json`) no VS Code e execute `npm ci` e `npm run dev`, um de cada vez. Se estiver na pasta que contém o arquivo `INICIAR_NO_WINDOWS.bat`, execute antes `cd .\ferramentaria` **uma única vez**.
 
 **Teste recomendado:** cadastre um inserto `F2018494` com descrição e estoque, abra uma saída e digite `f2018494`: descrição e saldo devem aparecer. Registre a primeira saída com **adicionar outro**, digite outro código e finalize, conferindo ambas as movimentações. Em outra execução, os registros devem persistir.
+
+
+## Versão 1.0.3 — funcionário por SSO digitado
+
+Em **Movimentações > Registrar saída**, o operador digita o **SSO do funcionário** em campo livre (sem `select`/lista de seleção). Quando existe correspondência **exata** com o SSO de um funcionário cadastrado, o campo somente leitura **Nome do funcionário** mostra o nome automaticamente. O SSO é tratado como texto para preservar zeros à esquerda. SSO inválido ou incompleto impede a saída.
+
+O sistema continua salvando o **ID interno do funcionário** na movimentação, preservando a compatibilidade com o SQLite e os históricos existentes. O botão **Registrar e adicionar outro inserto** preserva SSO, nome, máquina, obra, peça e observação, limpando apenas o código e a quantidade do inserto.
+
+Para atualizar uma instalação, exporte backup JSON, gere o novo `.exe` com `npm run dist` no Windows e valide em uma instalação de teste antes de distribuir. O identificador do app e o caminho de armazenamento local não foram alterados. Em ambiente corporativo, solicite a aprovação do TI para instalar novas versões.

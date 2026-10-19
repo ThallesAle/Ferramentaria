@@ -51,3 +51,23 @@ O instalador `.exe` só estará disponível após build Windows bem-sucedido; o 
 - [ ] Fechar e abrir mantém os cadastros e saídas reais da instalação anterior.
 - [ ] No navegador sem Electron não é possível trabalhar com cadastros temporários: mostra aviso de indisponibilidade da base real.
 - [ ] Rodar `npm test`, `npm run build` e testar instalador Windows antes de uso operacional.
+
+
+## Versão 1.0.3 — campo SSO digitável em Registrar saída
+
+- [x] Removido `select` de funcionário da saída; agora existe `input` de SSO e campo `Nome do funcionário` somente leitura.
+- [x] A correspondência SSO precisa ser completa, sem perder zeros à esquerda; espaços extras e caixa de letras não impedem o reconhecimento.
+- [x] Em erro de SSO ou SSO desconhecido, a movimentação é bloqueada antes de atingir o banco.
+- [x] O histórico continua associado ao ID do cadastro do funcionário, para manter compatibilidade com saídas anteriores.
+- [x] Registro consecutivo mantém o SSO informado e nome correspondente.
+- [x] Checagem sintática local TypeScript/TSX passou e validação isolada do SSO passou.
+- [ ] Testes npm completos e Electron/NSIS no Windows ainda necessários: `npm ci`, `npm test`, `npm run build`, `npm run dev`, `npm run dist`.
+
+### Teste manual sugerido
+
+1. Cadastre funcionário com ID `0001`, SSO `00212504474` e nome `Funcionário Um`.
+2. Em Movimentações > Registrar saída, digite `00212504474`. Confira o nome preenchido automaticamente sem escolher nada.
+3. Tente SSO `212504474` e `002125`: nome deve ficar em branco e a saída deve ser bloqueada.
+4. Registre saída para um inserto, clique Registrar e adicionar outro inserto: SSO, nome, máquina, obra, peça e observação precisam continuar preenchidos.
+5. Confira duas movimentações no histórico associadas ao mesmo funcionário após registrar o segundo inserto.
+6. Gere e teste o instalador `Ferramentaria-Setup-1.0.3-x64.exe` no Windows e faça backup da base atual antes de instalar por cima.

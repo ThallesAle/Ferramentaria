@@ -1,6 +1,6 @@
 {
   "name": "ferramentaria",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Gestão de ferramentaria desktop Windows com banco local SQLite, peças e relatórios",
   "author": "Equipe Ferramentaria",

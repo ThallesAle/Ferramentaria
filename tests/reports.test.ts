@@ -1,9 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {inflateRawSync} from 'node:zlib';
 import {emptyState,type Movement} from '../shared/domain';
 import {buildReport,initialReportFilters,localDateKey,reportFiltersSchema,movementStatus} from '../shared/report';
 import {generatePdfHtml,generateXlsx} from '../electron/reportFiles';
 
+// XLSX é um arquivo ZIP: os nomes de abas ficam em xl/workbook.xml, comprimido.
+// Ler os bytes diretamente com Buffer.includes() dá falso negativo.
+function xlsxXmlEntry(buffer:Buffer,wanted:string):string{
+ let pos=0;
+ while(pos+30<=buffer.length&&buffer.readUInt32LE(pos)===0x04034b50){
+  const method=buffer.readUInt16LE(pos+8);
+  const compressedSize=buffer.readUInt32LE(pos+18);
+  const rawSize=buffer.readUInt32LE(pos+22);
+  const nameLength=buffer.readUInt16LE(pos+26);
+  const extraLength=buffer.readUInt16LE(pos+28);
+  const dataStart=pos+30+nameLength+extraLength;
+  const dataEnd=dataStart+compressedSize;
+  assert.ok(dataEnd<=buffer.length,'Arquivo XLSX truncado');
+  const name=buffer.toString('utf8',pos+30,pos+30+nameLength);
+  if(name===wanted){
+   assert.equal(method,8,'O gerador XLSX deve usar DEFLATE');
+   const raw=inflateRawSync(buffer.subarray(dataStart,dataEnd));
+   assert.equal(raw.length,rawSize,`Tamanho inválido de ${wanted}`);
+   return raw.toString('utf8');
+  }
+  pos=dataEnd;
+ }
+ assert.fail(`Entrada ${wanted} ausente do XLSX`);
+}
 const at=(year:number,month:number,day:number)=>new Date(year,month-1,day,10,30).toISOString();
 function fixture(){
  const state=emptyState();
@@ -67,7 +92,8 @@ test('Fase 5: filtrar por peça e preservar peça em saídas estornadas',()=>{
  assert.match(pdf,/Eixo M-10/);
  const xlsx=generateXlsx(state,filtered);
  assert.equal(xlsx.readUInt32LE(0),0x04034b50);
- assert.ok(xlsx.includes(Buffer.from('Pecas')));
+ assert.match(xlsxXmlEntry(xlsx,'xl/workbook.xml'),/<sheet name="Pecas"/);
+ assert.match(xlsxXmlEntry(xlsx,'xl/worksheets/sheet7.xml'),/Eixo M-10/);
 });
 
 
@@ -77,6 +103,8 @@ test('v1.0.1: o extrato PDF e o Excel agrupam Peça / Obra ao lado de Máquina',
  assert.match(pdf,/<th>Máquina<\/th><th>Peça \/ Obra<\/th>/);
  assert.match(pdf,/Peça: Eixo M-10<br\/>Obra: Obra A/);
  const xlsx=generateXlsx(state,report);
- assert.ok(xlsx.includes(Buffer.from('Movimentacoes')));
- assert.ok(xlsx.includes(Buffer.from('Pecas')));
+ assert.match(xlsxXmlEntry(xlsx,'xl/workbook.xml'),/<sheet name="Movimentacoes"/);
+ assert.match(xlsxXmlEntry(xlsx,'xl/worksheets/sheet2.xml'),/Peça: Eixo M-10 \| Obra: Obra A/);
+ assert.match(xlsxXmlEntry(xlsx,'xl/workbook.xml'),/<sheet name="Pecas"/);
+ assert.match(xlsxXmlEntry(xlsx,'xl/worksheets/sheet7.xml'),/Eixo M-10/);
 });
