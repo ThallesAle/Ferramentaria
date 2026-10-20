@@ -1,4 +1,4 @@
-import {z} from 'zod';
+﻿import {z} from 'zod';
 
 const text=z.string().trim().min(1,'Preencha os campos obrigatórios.').max(160);
 const qty=z.number().int().min(0).max(1000000);
@@ -9,22 +9,27 @@ export const movementSchema=z.object({
  employee:z.string().max(160),machine:z.string().max(160),work:z.string().max(160),
  part:z.string().max(160),note:z.string().max(500)
 }).superRefine((v,c)=>{
- if(v.kind==='saida'&&(!v.employee.trim()||!v.machine.trim()||!v.work.trim()))
-  c.addIssue({code:'custom',message:'Informe funcionário, máquina e obra.'});
+ if(v.kind==='saida'&&(!v.employee.trim()||!v.machine.trim()||!v.work.trim()||!v.part.trim()))
+  c.addIssue({code:'custom',message:'Informe funcionário, máquina, obra e peça.'});
 });
+export const movementUpdateSchema=z.object({movementId:z.string().min(1).max(160)}).and(movementSchema);
 export const itemUpdateSchema=itemSchema.omit({stock:true});
-export const employeeUpdateSchema=employeeSchema;
+// O ID original identifica o cadastro a editar; newId é o código que substituirá o antigo.
+// Manter newId opcional conserva compatibilidade com comandos anteriores.
+export const employeeUpdateSchema=employeeSchema.extend({newId:text.optional()});
 export type Item=z.infer<typeof itemSchema>;
 export type Employee=z.infer<typeof employeeSchema>;
 export type MovementInput=z.infer<typeof movementSchema>;
-export type Movement=MovementInput&{id:string,date:string,reversalOf?:string};
+export type MovementCorrection={at:string,before:MovementInput};
+export type Movement=MovementInput&{id:string,date:string,reversalOf?:string,corrections?:MovementCorrection[]};
 export type State={items:Item[],employees:Employee[],movements:Movement[],brand:string,machines:string[],works:string[],parts:string[]};
 export type Command=
  |{type:'item',payload:Item}
  |{type:'item:update',payload:z.infer<typeof itemUpdateSchema>}
  |{type:'employee',payload:Employee}
- |{type:'employee:update',payload:Employee}
+ |{type:'employee:update',payload:Employee & {newId:string}}
  |{type:'movement',payload:MovementInput}
+ |{type:'movement:update',payload:z.infer<typeof movementUpdateSchema>}
  |{type:'brand',payload:string}
  |{type:'machine',payload:string}
  |{type:'work',payload:string}
@@ -40,7 +45,11 @@ const savedMovementSchema=z.object({
  kind:z.enum(['entrada','saida']),code:text,quantity:qty.min(1),
  employee:z.string().max(160),machine:z.string().max(160),work:z.string().max(160),
  part:z.string().max(160),note:z.string().max(500),
- id:z.string().min(1).max(160),date:z.string().datetime(),reversalOf:z.string().min(1).max(160).optional()
+ id:z.string().min(1).max(160),date:z.string().datetime(),reversalOf:z.string().min(1).max(160).optional(),
+ corrections:z.array(z.object({at:z.string().datetime(),before:z.object({
+  kind:z.enum(['entrada','saida']),code:text,quantity:qty.min(1),employee:z.string().max(160),
+  machine:z.string().max(160),work:z.string().max(160),part:z.string().max(160),note:z.string().max(500)
+ })})).max(100).optional()
 });
 export const stateSchema=z.object({
  items:z.array(itemSchema).max(50000),employees:z.array(employeeSchema).max(50000),
@@ -79,6 +88,19 @@ export const stateSchema=z.object({
 });
 export const backupSchema=z.object({version:z.literal(1),exportedAt:z.string().datetime(),state:stateSchema});
 
+// A interface pode sugerir nomes, mas a validação deve ocorrer também no SQLite.
+// Acentuação é preservada; maiúsculas e espaços externos podem ser corrigidos automaticamente.
+function validateMovementReferences(state:State,v:MovementInput):MovementInput{
+ if(v.kind!=='saida')return v;
+ if(!state.employees.some(e=>e.id===v.employee))throw Error('Funcionário não encontrado. Cadastre antes de registrar.');
+ const resolve=(entries:string[],value:string,label:string)=>{
+  const registered=entries.find(n=>n.toLocaleLowerCase('pt-BR')===value.trim().toLocaleLowerCase('pt-BR'));
+  if(!registered)throw Error(`${label} não cadastrada(o). Escolha um registro em Máquinas, obras e peças.`);
+  return registered;
+ };
+ return {...v,machine:resolve(state.machines,v.machine,'Máquina'),work:resolve(state.works,v.work,'Obra'),part:resolve(state.parts,v.part,'Peça')};
+}
+
 export function applyCommand(state:State,command:Command):State{
  const next=structuredClone(state);
  if(command.type==='item'){
@@ -99,8 +121,22 @@ export function applyCommand(state:State,command:Command):State{
   const v=employeeUpdateSchema.parse(command.payload);
   const employee=next.employees.find(e=>e.id===v.id);
   if(!employee)throw Error('Funcionário não encontrado.');
-  if(next.employees.some(e=>e.id!==v.id&&e.sso===v.sso))throw Error('SSO já cadastrado.');
-  Object.assign(employee,{sso:v.sso,name:v.name,area:v.area});
+  const newId=v.newId??v.id;
+  const normalizedId=newId.toLocaleLowerCase('pt-BR');
+  const normalizedSso=v.sso.toLocaleLowerCase('pt-BR');
+  if(next.employees.some(e=>e!==employee&&(e.id.toLocaleLowerCase('pt-BR')===normalizedId||e.sso.toLocaleLowerCase('pt-BR')===normalizedSso)))
+   throw Error('ID ou SSO já cadastrado. Informe valores exclusivos.');
+  // O ID é a referência das saídas: alterá-lo exige migrar, na mesma transação,
+  // os registros atuais, estornos antigos e referências guardadas nas correções.
+  if(newId!==v.id){
+   for(const movement of next.movements){
+    if(movement.employee===v.id)movement.employee=newId;
+    for(const correction of movement.corrections??[]){
+     if(correction.before.employee===v.id)correction.before.employee=newId;
+    }
+   }
+  }
+  Object.assign(employee,{id:newId,sso:v.sso,name:v.name,area:v.area});
  }else if(command.type==='brand'){
   next.brand=text.max(40).parse(command.payload);
  }else if(command.type==='machine'||command.type==='work'||command.type==='part'){
@@ -140,12 +176,36 @@ export function applyCommand(state:State,command:Command):State{
   if(kind==='saida'&&item.stock<original.quantity)throw Error('Não é possível estornar: o saldo atual é insuficiente.');
   if(kind==='entrada'&&item.stock+original.quantity>1000000)throw Error('Estorno ultrapassaria o limite de estoque.');
   item.stock+=kind==='entrada'?original.quantity:-original.quantity;
-  next.movements.unshift({...original,id:crypto.randomUUID(),date:new Date().toISOString(),kind,note:`Estorno de ${original.id.slice(0,8)}: ${input.reason}`,reversalOf:original.id});
+  const {corrections:previousCorrections,...snapshot}=original;
+  next.movements.unshift({...snapshot,id:crypto.randomUUID(),date:new Date().toISOString(),kind,note:`Estorno de ${original.id.slice(0,8)}: ${input.reason}`,reversalOf:original.id});
+ }else if(command.type==='movement:update'){
+  const {movementId,...fields}=movementUpdateSchema.parse(command.payload);
+  const old=next.movements.find(m=>m.id===movementId);
+  if(!old)throw Error('Movimentação não encontrada.');
+  if(old.reversalOf||next.movements.some(m=>m.reversalOf===old.id))
+   throw Error('Movimentações estornadas e estornos não podem ser editados.');
+  if(old.kind!==fields.kind)throw Error('O tipo de movimentação não pode ser alterado na edição.');
+  const v=validateMovementReferences(next,fields);
+  const source=next.items.find(i=>i.code===old.code);
+  const destination=next.items.find(i=>i.code===v.code);
+  if(!source||!destination)throw Error('Inserto não encontrado.');
+  // Reverter o efeito anterior e aplicar o corrigido, tudo na mesma transação.
+  // Também funciona quando código e quantidade mudam simultaneamente.
+  source.stock+=old.kind==='entrada'?-old.quantity:old.quantity;
+  destination.stock+=v.kind==='entrada'?v.quantity:-v.quantity;
+  for(const item of next.items){
+   if(item.stock<0)throw Error('Correção bloqueada: saldo insuficiente para ajustar a movimentação.');
+   if(item.stock>1000000)throw Error('Correção bloqueada: limite de estoque excedido.');
+  }
+  const before:MovementInput={kind:old.kind,code:old.code,quantity:old.quantity,employee:old.employee,machine:old.machine,work:old.work,part:old.part,note:old.note};
+  if(Object.keys(before).every(k=>before[k as keyof MovementInput]===v[k as keyof MovementInput]))
+   throw Error('Nenhuma informação foi alterada.');
+  if((old.corrections?.length??0)>=100)throw Error('Limite de correções atingido para esta movimentação.');
+  Object.assign(old,v,{corrections:[...(old.corrections??[]),{at:new Date().toISOString(),before}]});
  }else if(command.type==='movement'){
-  const v=movementSchema.parse(command.payload);
+  const v=validateMovementReferences(next,movementSchema.parse(command.payload));
   const item=next.items.find(i=>i.code===v.code);
   if(!item)throw Error('Inserto não encontrado.');
-  if(v.kind==='saida'&&!next.employees.some(e=>e.id===v.employee))throw Error('Funcionário não encontrado.');
   if(v.kind==='saida'&&item.stock<v.quantity)throw Error('Saldo insuficiente para esta saída.');
   item.stock+=v.kind==='entrada'?v.quantity:-v.quantity;
   if(item.stock>1000000)throw Error('Limite de estoque excedido.');
@@ -153,3 +213,4 @@ export function applyCommand(state:State,command:Command):State{
  }else throw Error('Operação não permitida.');
  return next;
 }
+

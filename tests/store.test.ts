@@ -10,7 +10,8 @@ test('SQLite: cadastro, saldo, rollback, duplicidade e persistência após reabr
  assert.equal(db.read().items.length,0);
  db.command({type:'item',payload:{code:'A',description:'Teste',stock:10,min:2,location:'A1'}});
  db.command({type:'employee',payload:{id:'1',sso:'S1',name:'Teste',area:'Usinagem'}});
- const movement={kind:'saida' as const,code:'A',quantity:3,employee:'1',machine:'ROMI',work:'Obra',part:'',note:''};
+ db.command({type:'machine',payload:'ROMI'});db.command({type:'work',payload:'Obra'});db.command({type:'part',payload:'Eixo'});
+ const movement={kind:'saida' as const,code:'A',quantity:3,employee:'1',machine:'ROMI',work:'Obra',part:'Eixo',note:''};
  db.command({type:'movement',payload:movement});assert.equal(db.read().items[0].stock,7);
  assert.throws(()=>db.command({type:'movement',payload:{...movement,quantity:8}}),/Saldo insuficiente/);
  assert.throws(()=>db.command({type:'movement',payload:{...movement,quantity:-1}}));

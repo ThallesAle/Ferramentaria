@@ -45,7 +45,8 @@ test('Fase 3: importação em lote é atômica, não sobrescreve cadastros',()=>
 test('Fase 3: estornos são registrados e bloqueados quando duplicados ou com saldo insuficiente',()=>withStore(db=>{
  db.command({type:'item',payload:{code:'A',description:'Inserto',stock:20,min:5,location:'A1'}});
  db.command({type:'employee',payload:{id:'1',sso:'SSO1',name:'Ana',area:'Usinagem'}});
- db.command({type:'movement',payload:{kind:'saida',code:'A',quantity:6,employee:'1',machine:'ROMI',work:'Obra A',part:'',note:''}});
+ db.command({type:'machine',payload:'ROMI'});db.command({type:'work',payload:'Obra A'});db.command({type:'part',payload:'Eixo'});
+ db.command({type:'movement',payload:{kind:'saida',code:'A',quantity:6,employee:'1',machine:'ROMI',work:'Obra A',part:'Eixo',note:''}});
  assert.equal(db.read().items[0].stock,14);
  const id=db.read().movements[0].id;
  db.command({type:'reversal',payload:{movementId:id,reason:'Registro duplicado'}});
@@ -59,7 +60,7 @@ test('Fase 3: estornos são registrados e bloqueados quando duplicados ou com sa
  assert.deepEqual(db.read(),before);
  db.command({type:'movement',payload:{kind:'entrada',code:'A',quantity:10,employee:'',machine:'',work:'',part:'',note:''}});
  const entrada=db.read().movements[0].id;
- db.command({type:'movement',payload:{kind:'saida',code:'A',quantity:25,employee:'1',machine:'ROMI',work:'Obra A',part:'',note:''}});
+ db.command({type:'movement',payload:{kind:'saida',code:'A',quantity:25,employee:'1',machine:'ROMI',work:'Obra A',part:'Eixo',note:''}});
  assert.equal(db.read().items[0].stock,5);
  assert.throws(()=>db.command({type:'reversal',payload:{movementId:entrada,reason:'Entrada incorreta'}}),/saldo atual é insuficiente/);
  assert.equal(db.read().items[0].stock,5);
@@ -87,6 +88,7 @@ test('Fase 5: catálogo de peças é persistente, impede repetição e migra bac
  assert.throws(()=>db.command({type:'part',payload:'eixo principal'}),/já existe/);
  db.command({type:'item',payload:{code:'F100',description:'Inserto',stock:25,min:3,location:'A1'}});
  db.command({type:'employee',payload:{id:'001',sso:'0010',name:'Ana',area:'Torno'}});
+ db.command({type:'machine',payload:'ROMI'});db.command({type:'work',payload:'Obra A'});
  db.command({type:'movement',payload:{kind:'saida',code:'F100',quantity:5,employee:'001',machine:'ROMI',work:'Obra A',part:'Eixo principal',note:''}});
  assert.equal(db.read().movements[0].part,'Eixo principal');
  const id=db.read().movements[0].id;
@@ -105,6 +107,7 @@ test('v1.0.1: duas saídas seguidas para o mesmo funcionário preservam máquina
  db.command({type:'employee',payload:{id:'001',sso:'S001',name:'Ana',area:'Usinagem'}});
  db.command({type:'item',payload:{code:'INS-A',description:'Inserto A',stock:10,min:2,location:'A-01'}});
  db.command({type:'item',payload:{code:'INS-B',description:'Inserto B',stock:8,min:2,location:'A-02'}});
+ db.command({type:'machine',payload:'ROMI'});db.command({type:'work',payload:'OB-42'});db.command({type:'part',payload:'Eixo maior'});
  const contexto={kind:'saida' as const,employee:'001',machine:'ROMI',work:'OB-42',part:'Eixo maior',note:'Pedido da mesma pessoa'};
  db.command({type:'movement',payload:{...contexto,code:'INS-A',quantity:3}});
  db.command({type:'movement',payload:{...contexto,code:'INS-B',quantity:2}});

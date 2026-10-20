@@ -1,11 +1,11 @@
-# Ferramentaria — Versão 1.0.3 (SSO digitado e nome automático)
+# Ferramentaria — Versão 1.0.5 (novas correções do cadastro e da saída)
 
 Sistema Windows de controle de estoque de insertos. Interface React + TypeScript e Electron, com SQLite local no processo principal. **Cada instalação tem um banco próprio e não sincroniza com os outros computadores.** A marca Ferramentaria é provisória e editável.
 
 ## Novidades da versão 1.0.1
 
 - **Cadastro de peças** em **Máquinas, obras e peças**, ao lado de máquinas e obras. O cadastro não permite nomes duplicados (sem distinção de maiúsculas/minúsculas).
-- No formulário **Registrar saída**, o campo **Peça (nome da peça)** agora sugere nomes cadastrados e também permite digitação livre. Ele permanece opcional para não bloquear operações não associadas a uma peça. Nomes já registrados em saídas antigas continuam associados ao histórico.
+- No formulário **Registrar saída**, o campo **Peça (nome da peça)** agora sugere nomes cadastrados e também permite digitação livre. Na versão atual, o campo é obrigatório e só salva quando o nome digitado já existe no cadastro. Nomes já registrados em saídas antigas continuam associados ao histórico.
 - **Histórico de movimentações:** coluna **Peça** separada de **Máquina / obra**, com pesquisa também pelo nome da peça. Registros históricos sem peça aparecem com travessão.
 - **Relatórios:** filtros por peça, gráfico de consumo por peça, coluna Peça no histórico da tela e no extrato PDF. O Excel já exportava o campo Peça e agora adiciona uma aba de ranking **Pecas** (9 abas no total).
 - **Compatibilidade:** bases SQLite e backups JSON das fases anteriores continuam aceitos. O cadastro `parts` é criado vazio quando o banco ou backup antigo não o contém. Os registros antigos não são apagados.
@@ -60,8 +60,8 @@ O SQLite em geral fica em `%APPDATA%\ferramentaria\ferramentaria.sqlite`, e os b
 
 - **Insertos:** código, descrição, saldo, estoque mínimo e localização; código único. Saldo corrigido por movimentação, não por edição do cadastro.
 - **Funcionários:** ID, SSO, nome e área. IDs/SSOs exclusivos.
-- **Máquinas, obras e peças:** catálogos locais, sugestões nas saídas. Os três campos aceitam texto livre; o nome da peça é opcional.
-- **Saídas:** inserto existente, funcionário cadastrado, máquina, obra e quantidade obrigatórios, com bloqueio de saldo negativo. O campo Peça, se informado, é registrado e pesquisável no histórico.
+- **Máquinas, obras e peças:** catálogos locais, sugestões nas saídas. Nas saídas, os três campos são obrigatórios e aceitam apenas valores cadastrados.
+- **Saídas:** inserto existente, funcionário cadastrado, máquina, obra, peça e quantidade obrigatórios, com digitação assistida por sugestões, confirmação de cadastro existente e bloqueio de saldo negativo.
 - **Abastecimento:** entrada de insertos e alerta de estoque mínimo.
 - **Estornos:** sempre geram movimentação inversa vinculada à original; não apagam registros e não permitem duplicação ou saldo negativo.
 - **Relatórios:** filtro por período, tipo, código, máquina, obra, peça e funcionário. Estornos são excluídos retroativamente do consumo líquido, mas mantidos no extrato de auditoria.
@@ -122,3 +122,24 @@ Em **Movimentações > Registrar saída**, o operador digita o **SSO do funcion�
 O sistema continua salvando o **ID interno do funcionário** na movimentação, preservando a compatibilidade com o SQLite e os históricos existentes. O botão **Registrar e adicionar outro inserto** preserva SSO, nome, máquina, obra, peça e observação, limpando apenas o código e a quantidade do inserto.
 
 Para atualizar uma instalação, exporte backup JSON, gere o novo `.exe` com `npm run dist` no Windows e valide em uma instalação de teste antes de distribuir. O identificador do app e o caminho de armazenamento local não foram alterados. Em ambiente corporativo, solicite a aprovação do TI para instalar novas versões.
+
+
+## Versão 1.0.5 — edição de movimentações, cadastros validados e descrição nos relatórios
+
+- Em **Movimentações > Histórico**, o botão de lápis abre a correção de uma entrada ou saída. Os campos mantêm os valores atuais e permitem alterar código do inserto, quantidade, obra, máquina, peça, funcionário (saídas) e observação. Data, ID e tipo permanecem fixos.
+- A correção atualiza o mesmo registro, sem criar nova saída; o saldo de insertos é recalculado na **mesma transação SQLite**. O sistema rejeita correções que causariam saldo negativo ou excederiam o limite de 1.000.000. Os dados corrigidos aparecem imediatamente em Dashboard, Histórico, Abastecimento e relatórios.
+- Cada registro corrigido exibe um indicador de correção. O backup JSON preserva as revisões anteriores (`corrections`) para rastreabilidade. Registros já estornados ou de estorno não podem ser editados, para não invalidar o vínculo contábil.
+- Em **Registrar saída**, não se salva antes de preencher inserto válido, quantidade, SSO de funcionário existente, máquina, obra e peça. Os três últimos são **campos de texto com sugestões de cadastro** e somente aceitam nomes já existentes, validados na interface e novamente no banco. O campo Observação permanece opcional.
+- Em **Relatórios > Insertos mais consumidos**, exibe código e descrição. Em **Extrato de movimentações**, mostra ambos; o **PDF** e a aba **Insertos** do **Excel** também incluem os dois campos.
+- Mantém o mesmo caminho SQLite e o mesmo formato `version: 1` de backup, com campos de correção opcionais. Faça backup antes de atualizar e teste com uma cópia da base.
+
+**Para executar no Windows:** abra a pasta `ferramentaria` no VS Code, execute `npm ci`, `npm test`, `npm run build`, depois `npm run dev`. Para criar o instalador, execute `npm run dist` no Windows. O ZIP de código-fonte não contém um novo `.exe` compilado nem `node_modules`.
+
+## Versão 1.0.5 — ajustes adicionais
+
+- **Registrar saída:** Máquina, Obra e Peça podem ser digitadas normalmente; a lista de sugestões aparece conforme os nomes cadastrados. A gravação é recusada se qualquer um não existir no cadastro. A comparação ignora diferença de maiúsculas/minúsculas e espaços no início/fim; o nome é salvo com a grafia oficial do cadastro.
+- **Dashboard > Insertos mais utilizados:** cada barra mostra código e descrição do inserto, além da quantidade.
+- **Movimentações:** removido o botão de estornar da interface; o histórico de estornos antigos é preservado para auditoria. O botão Editar permanece.
+- **Funcionários > Editar:** o ID agora é editável. Se for alterado, os movimentos atuais e as referências no histórico de correções e de estornos recebem o ID novo na mesma transação; IDs/SSOs duplicados são bloqueados.
+
+O formato do backup e o identificador da aplicação permanecem os mesmos. Faça um backup antes de atualizar.

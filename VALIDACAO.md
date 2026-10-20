@@ -21,7 +21,7 @@
 4. Cadastre duas peças em **Máquinas, obras e peças**, tente cadastrar uma peça duplicada com letras maiúsculas/minúsculas diferentes: deve ser bloqueada.
 5. Registre saída escolhendo uma peça cadastrada. Veja a coluna **Peça** no Dashboard e em Movimentações e pesquise pelo nome da peça.
 6. Feche e reabra: o cadastro e o nome da peça no histórico devem persistir.
-7. Estorne uma saída: a peça deve permanecer tanto na saída original quanto no estorno, e o estoque deve retornar ao saldo anterior.
+7. Caso a base já tenha estornos antigos, confira se continuam visíveis e se seus saldos históricos são preservados. (O botão Estornar foi retirado na 1.0.5.)
 8. Vá a Relatórios: filtre pela peça, confira o consumo e o histórico; exporte Excel (aba **Pecas**) e PDF (coluna **Peça**).
 9. Importe backup antigo (de teste) sem `parts`: os insertos e históricos antigos devem permanecer intactos e o catálogo de peças deve aparecer vazio.
 10. Veja os backups automáticos na pasta `%APPDATA%\ferramentaria\backups`; exporte um backup manual em local externo.
@@ -71,3 +71,23 @@ O instalador `.exe` só estará disponível após build Windows bem-sucedido; o 
 4. Registre saída para um inserto, clique Registrar e adicionar outro inserto: SSO, nome, máquina, obra, peça e observação precisam continuar preenchidos.
 5. Confira duas movimentações no histórico associadas ao mesmo funcionário após registrar o segundo inserto.
 6. Gere e teste o instalador `Ferramentaria-Setup-1.0.3-x64.exe` no Windows e faça backup da base atual antes de instalar por cima.
+
+
+## Checklist 1.0.5
+
+1. Cadastre máquina, obra, peça, funcionário e inserto. Tente registrar uma saída faltando cada campo; nenhuma deve ser gravada.
+2. Digite máquina, obra e peça manualmente, e também escolha nas sugestões. Nomes não cadastrados devem ser rejeitados ao salvar; SSO e código inválidos também.
+3. Registre uma saída. Em Histórico, clique no lápis e corrija peça e obra. Confirme alteração nos filtros, relatórios e tela inicial.
+4. Edite código e quantidade com saldo suficiente. Confirme devolução ao inserto antigo e débito no novo, sem segunda movimentação.
+5. Teste correção que produziria saldo negativo; deve falhar e preservar banco. Tente editar movimento estornado; deve falhar.
+6. Confira código e descrição nos rankings, extrato, PDF e Excel. Faça backup/restauração e confira se a correção permanece.
+
+## Checklist adicional 1.0.5 — validação manual pendente no Windows
+
+1. Em Dashboard > Insertos mais utilizados, confirme que aparecem código e descrição do inserto.
+2. Em Movimentações, confirme que existe apenas o botão Editar e que não aparece Estornar. Registros estornados anteriormente ainda devem aparecer no histórico.
+3. Em Funcionários, edite o ID de um funcionário com saídas antigas; confirme o novo ID em seu cadastro e o nome associado às saídas antigas, sem perda de histórico ou saldo.
+4. Tente mudar o ID para outro já cadastrado (inclusive mesma grafia com maiúsculas distintas): a alteração deve ser bloqueada sem modificar o histórico.
+5. Depois de `npm ci --include=dev`, execute `npm test` e `npm run build` no Windows antes de gerar o instalador.
+
+Verificação nesta preparação: sintaxe de 17 arquivos TS/TSX sem erros. Dependências não ficaram instaladas neste ambiente, portanto a bateria `npm test` e a compilação completa **não foram executadas aqui**.

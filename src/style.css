@@ -69,3 +69,16 @@ button:disabled{cursor:not-allowed;opacity:.52}
 .startup small{max-width:600px}
 .stock-hint.invalid-code{background:#fff2ec;color:#ac4d3b}
 input[readonly]{background:#f4f8f8;color:#365d60;cursor:default}
+/* v1.0.4: ações de edição e indicação de histórico corrigido */
+.movement-actions{display:flex;align-items:center;gap:6px}
+.edited-note{color:#267a74;font-weight:600}
+
+.report-bars .bar-label>span.inserto-ranking-label{overflow:visible;text-overflow:clip;white-space:normal;min-width:0}
+.inserto-ranking-label b{display:block;font-size:11px;color:#355667}
+.inserto-ranking-label small{font-size:10px;color:#8495a0;line-height:1.45;margin-top:3px}
+
+/* Dashboard: exibir código e descrição em duas linhas para cada inserto. */
+.dashboard-inserto-code{display:block;font-size:11px;color:#355667;font-weight:650;overflow-wrap:anywhere}
+.dashboard-inserto-description{display:block;font-size:10px;line-height:1.45;color:#8495a0;margin-top:3px;overflow-wrap:anywhere}
+.bars .text-sm>span{min-width:0;overflow-wrap:anywhere}
+.bars .text-sm>strong{flex-shrink:0}

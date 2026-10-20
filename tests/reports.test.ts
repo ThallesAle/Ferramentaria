@@ -52,7 +52,7 @@ test('filtro outubro: consumo líquido ignora saída estornada em novembro, pres
  assert.equal(report.exitUnits,9);assert.equal(report.exitRecords,2);assert.equal(report.entryUnits,20);
  assert.equal(report.totalRecords,4);assert.equal(report.reversedRecords,1);
  assert.equal(report.machinesServed,1);assert.equal(report.employeesServed,1);assert.equal(report.lowItems,1);
- assert.deepEqual(report.byCode.map(r=>[r.name,r.quantity]),[['A001',5],['A002',4]]);
+ assert.deepEqual(report.byCode.map(r=>[r.name,r.quantity]),[['A001 — Inserto <valioso>',5],['A002 — Fresa',4]]);
  assert.equal(report.byMachine[0].quantity,9);
  assert.equal(movementStatus(state.movements[2],new Set(['out2'])),'Estornada');
 });
@@ -76,6 +76,8 @@ test('Excel gera planilha OpenXML e PDF escapa valores de insertos',()=>{
  assert.match(pdf,/Inserto/);assert.match(pdf,/Relatório operacional/);
  assert.ok(!pdf.includes('Inserto <valioso>'));
  assert.match(pdf,/Ana &amp; Pedro/);
+ assert.match(pdf,/A001<\/td><td>Inserto &lt;valioso&gt;/);
+ assert.match(xlsxXmlEntry(excel,'xl/worksheets/sheet4.xml'),/Inserto &lt;valioso&gt;/);
 });
 
 test('Fase 5: filtrar por peça e preservar peça em saídas estornadas',()=>{

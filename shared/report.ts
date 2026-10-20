@@ -14,7 +14,7 @@ export const reportFiltersSchema=z.object({
  if(f.from&&f.to&&f.from>f.to)ctx.addIssue({code:'custom',path:['to'],message:'Data final anterior à inicial.'});
 });
 export type ReportFilters=z.infer<typeof reportFiltersSchema>;
-export type Ranking={name:string,quantity:number,records:number};
+export type Ranking={name:string,quantity:number,records:number,code?:string,description?:string};
 export type TrendPoint={label:string,quantity:number,records:number};
 export type Report={filters:ReportFilters,generatedAt:string,allMovements:Movement[],effectiveMovements:Movement[],
  totalRecords:number,reversedRecords:number,entryRecords:number,exitRecords:number,entryUnits:number,exitUnits:number,
@@ -76,6 +76,6 @@ export function buildReport(state:State,untrusted:ReportFilters,now=new Date()):
   employeesServed:new Set(exits.map(m=>m.employee).filter(Boolean)).size,
   lowItems:state.items.filter(i=>i.stock<=i.min).length,
   stockUnits:state.items.reduce((n,i)=>n+i.stock,0),
-  byCode:rank(exits,m=>m.code),byMachine:rank(exits,m=>m.machine),byWork:rank(exits,m=>m.work),byPart:rank(exits,m=>m.part),byEmployee,
+  byCode:rank(exits,m=>m.code).map(row=>{const description=state.items.find(item=>item.code===row.name)?.description??'';return {...row,code:row.name,description,name:description?`${row.name} — ${description}`:row.name};}),byMachine:rank(exits,m=>m.machine),byWork:rank(exits,m=>m.work),byPart:rank(exits,m=>m.part),byEmployee,
   trend:trendRows(exits,filters)};
 }

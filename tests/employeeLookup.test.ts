@@ -28,6 +28,7 @@ test('SSO incompleto, inexistente e sem zeros à esquerda não resolve funcioná
 test('Saída salva ID interno do funcionário localizado pelo SSO',()=>{
  const state=emptyState();
  state.employees=employees;
+ state.machines=['ROMI'];state.works=['OBRA 1'];state.parts=['Eixo'];
  state.items=[{code:'F1',description:'Inserto de teste',stock:10,min:1,location:'A1'}];
  const id=findEmployeeBySSO(state.employees,'SSO0002')?.id;
  assert.ok(id);
@@ -39,6 +40,7 @@ test('Saída salva ID interno do funcionário localizado pelo SSO',()=>{
 test('Duas saídas para o mesmo SSO mantêm o vínculo do funcionário',()=>{
  const state=emptyState();
  state.employees=employees;
+ state.machines=['ROMI'];state.works=['OBRA 1'];state.parts=['Eixo'];
  state.items=[{code:'F1',description:'Inserto A',stock:10,min:1,location:'A1'},{code:'F2',description:'Inserto B',stock:10,min:1,location:'A1'}];
  const id=findEmployeeBySSO(state.employees,'00212504474')?.id;
  assert.ok(id);
